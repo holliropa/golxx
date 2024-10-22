@@ -19,8 +19,6 @@ public:
     std::map<glfwxx::KeyCode, bool> UpKeys;
     std::map<glfwxx::KeyCode, bool> PressedKeys;
 
-    Game(unsigned int width, unsigned int height);
-
     ~Game();
 
     void Initialize();
@@ -31,4 +29,5 @@ public:
 
     void Render();
 
+    size_t GetLiveCellsCount() const;
 };

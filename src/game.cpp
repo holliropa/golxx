@@ -1,9 +1,13 @@
 #include <iostream>
-#include <set>
+#include <unordered_set>
 #include "game.hpp"
 #include "shader_manager.hpp"
 #include "mesh_manager.hpp"
 #include "files.hpp"
+
+void update_screen_size(unsigned int width, unsigned int height);
+
+void update_projection();
 
 void load_shaders();
 
@@ -11,32 +15,27 @@ void load_meshes();
 
 void do_step();
 
+struct Camera {
+    glm::vec3 position{};
+    glm::mat4 projection{};
+    float zoomLevel = 500.0f;
+};
+
+float widthF, heightF, windowAspectRatio;
+
 Shader *shader;
 Mesh *mesh;
+Camera camera;
 glm::mat4 projection;
-unsigned int size;
-float cellSize;
-std::map<unsigned int, bool> states;
-unsigned int lastCellIndex = -1;
-std::set<unsigned int> liveCellIndexes;
-glm::vec3 liveCellColor = glm::vec3(1.0f, 1.0f, 1.0f);
-float widthF, heightF;
+float cellSize = 1.0f;
+std::unordered_set<glm::ivec2> liveCells;
+glm::ivec2 lastCellPosition;
+
 bool isAutoUpdate = false;
 float updateIntervalS = 0.5f;
 float lastUpdateS = 0.0f;
 
-Game::Game(unsigned int width, unsigned int height)
-        : Width(width),
-          Height(height) {
-    projection = glm::ortho(
-            0.0f, 1.0f,  // Left, Right
-            1.0f, 0.0f,  // Bottom, Top
-            -1.0f, 1.0f   // Near, Far
-    );
-
-    widthF = static_cast<float>(width);
-    heightF = static_cast<float>(height);
-}
+glm::vec3 liveCellColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
 Game::~Game() {
     shader = nullptr;
@@ -50,29 +49,24 @@ void Game::Initialize() {
     load_shaders();
     load_meshes();
 
-    auto defaultShader = &ShaderManager::Get("default");
-    defaultShader->use();
-    defaultShader->setVec3f("color", glm::vec3(1.0f, 0.0f, 1.0f));
-    defaultShader->setMatrix4fv("projection", projection);
-    shader = defaultShader;
+    shader = &ShaderManager::Get("default");
+    shader->use();
+    shader->setVec3f("color", liveCellColor);
 
     mesh = &MeshManager::Get("quad");
-
-    size = 100;
-    cellSize = 1.0f / static_cast<float>(size);
 }
 
 void Game::Resize(unsigned int width, unsigned int height) {
     this->Width = width;
     this->Height = height;
 
-    widthF = static_cast<float>(width);
-    heightF = static_cast<float>(height);
+    update_screen_size(width, height);
 }
 
 void Game::Update(float deltaTime) {
     if (DownKeys[glfwxx::KeyCode::Escape])
         this->IsExit = true;
+
 
     if (PressedButtons[glfwxx::ButtonCode::Left]) {
         if (CursorPosition.x < widthF &&
@@ -80,25 +74,31 @@ void Game::Update(float deltaTime) {
             CursorPosition.x > 0.0f &&
             CursorPosition.y > 0.0f) {
 
-            auto pos = glm::vec2(CursorPosition.x / widthF, CursorPosition.y / heightF);
-            auto column = static_cast<unsigned int>(pos.x / cellSize);
-            auto row = static_cast<unsigned int>(pos.y / cellSize);
-            unsigned int cellIndex = row * size + column;
+            float ndcX = (2.0f * CursorPosition.x) / widthF - 1.0f;
+            float ndcY = 1.0f - (2.0f * CursorPosition.y) / heightF; // Inverted Y-axis for NDC
+            glm::vec4 ndcPos(ndcX, ndcY, 0.0f, 1.0f);
 
-            if (lastCellIndex != cellIndex) {
-                lastCellIndex = cellIndex;
-                auto cellState = !states[cellIndex];
-                states[cellIndex] = cellState;
+            glm::mat4 inverseProjView = glm::inverse(
+                    camera.projection * glm::translate(glm::identity<glm::mat4>(), -camera.position));
+            glm::vec4 worldPos = inverseProjView * ndcPos;
 
-                if (cellState) {
-                    liveCellIndexes.insert(cellIndex);
+            worldPos /= worldPos.w;
+
+            auto column = static_cast<int>(std::floor(worldPos.x));
+            auto row = static_cast<int>(std::floor(worldPos.y));
+            auto cellPosition = glm::ivec2(column, row);
+
+            if (cellPosition != lastCellPosition) {
+                lastCellPosition = cellPosition;
+                if (liveCells.find(cellPosition) != liveCells.end()) {
+                    liveCells.erase(cellPosition);
                 } else {
-                    liveCellIndexes.erase(cellIndex);
+                    liveCells.insert(cellPosition);
                 }
             }
         }
     } else {
-        lastCellIndex = -1;
+        lastCellPosition = glm::ivec2(-1);
     }
 
     if (DownKeys[glfwxx::KeyCode::LeftShift]) {
@@ -114,8 +114,32 @@ void Game::Update(float deltaTime) {
     }
 
     if (DownKeys[glfwxx::KeyCode::C]) {
-        states.clear();
-        liveCellIndexes.clear();
+        liveCells.clear();
+    }
+
+    float baseSpeed = 1.0f;
+    float speedFactor = baseSpeed * camera.zoomLevel * deltaTime;  // Adjust camera speed based on zoom level
+    if (PressedKeys[glfwxx::KeyCode::W]) {
+        camera.position.y += speedFactor;
+    }
+    if (PressedKeys[glfwxx::KeyCode::S]) {
+        camera.position.y -= speedFactor;
+    }
+    if (PressedKeys[glfwxx::KeyCode::D]) {
+        camera.position.x += speedFactor;
+    }
+    if (PressedKeys[glfwxx::KeyCode::A]) {
+        camera.position.x -= speedFactor;
+    }
+
+    if (PressedKeys[glfwxx::KeyCode::Z]) {
+        camera.zoomLevel -= 0.1f;  // Zoom in
+        if (camera.zoomLevel < 0.1f) camera.zoomLevel = 0.1f;  // Prevent excessive zoom in
+        update_projection();
+    }
+    if (PressedKeys[glfwxx::KeyCode::X]) {
+        camera.zoomLevel += 0.1f;  // Zoom out
+        update_projection();
     }
 
     if (isAutoUpdate) {
@@ -130,22 +154,43 @@ void Game::Update(float deltaTime) {
 
 void Game::Render() {
     shader->use();
-    for (const auto &liveCellIndex: liveCellIndexes) {
-        unsigned int row = liveCellIndex / size;
-        unsigned int column = liveCellIndex % size;
-        auto cellPosition = glm::vec2(static_cast<float>(column) * cellSize,
-                                      static_cast<float>(row) * cellSize);
+    shader->setMatrix4fv("projection", camera.projection);
+    shader->setMatrix4fv("view", glm::translate(glm::identity<glm::mat4>(), -camera.position));
+
+
+    shader->setVec3f("color", liveCellColor);
+    for (const auto &liveCell: liveCells) {
+        auto cellPosition = glm::vec2(static_cast<float>(liveCell.x) * cellSize,
+                                      static_cast<float>(liveCell.y) * cellSize);
 
         auto model = glm::identity<glm::mat4>();
-        model = glm::translate(model, glm::vec3(glm::vec3(cellPosition, 0.0f)));
+        model = glm::translate(model, glm::vec3(cellPosition, 0.0f));
         model = glm::scale(model, glm::vec3(cellSize, cellSize, 1.0f));
         model = glm::translate(model, glm::vec3(0.5f));
         shader->setMatrix4fv("model", model);
 
-        shader->setVec3f("color", liveCellColor);
-
         mesh->draw();
     }
+}
+
+size_t Game::GetLiveCellsCount() const {
+    return liveCells.size();
+}
+
+void update_screen_size(unsigned int width, unsigned int height) {
+    widthF = static_cast<float>(width);
+    heightF = static_cast<float>(height);
+
+    windowAspectRatio = widthF / heightF;
+
+    update_projection();
+}
+
+void update_projection() {
+    camera.projection = glm::ortho(
+            -1.0f * windowAspectRatio * camera.zoomLevel, 1.0f * windowAspectRatio * camera.zoomLevel,
+            -camera.zoomLevel, camera.zoomLevel
+    );
 }
 
 void load_shaders() {
@@ -192,11 +237,11 @@ void load_meshes() {
 }
 
 void do_step() {
-    std::set<unsigned int> nextLiveCellIndexes;
-    std::set<unsigned int> activeCells; // Includes live cells and their neighbors
+    std::unordered_set<glm::ivec2> nextLiveCell;
+    std::unordered_set<glm::ivec2> activeCells; // Includes live cells and their neighbors
 
     // Neighbor offsets: [x, y] positions relative to the current cell
-    std::vector<std::pair<int, int>> neighborOffsets = {
+    std::vector<glm::ivec2> neighborOffsets = {
             {-1, -1},
             {-1, 0},
             {-1, 1},
@@ -208,117 +253,44 @@ void do_step() {
     };
 
     // Add live cells and their neighbors to the active cell set
-    for (const auto &liveCellIndex: liveCellIndexes) {
-        unsigned int row = liveCellIndex / size;
-        unsigned int col = liveCellIndex % size;
-
+    for (const auto &liveCell: liveCells) {
         // Add the live cell itself
-        activeCells.insert(liveCellIndex);
+        activeCells.insert(liveCell);
 
         // Add its neighbors
         for (const auto &offset: neighborOffsets) {
-            int neighborRow = row + offset.first;
-            int neighborCol = col + offset.second;
-
-            if (neighborRow >= 0 && neighborRow < size &&
-                neighborCol >= 0 && neighborCol < size) {
-                activeCells.insert(neighborRow * size + neighborCol);
-            }
+            auto neighbourCell = liveCell + offset;
+            activeCells.insert(neighbourCell);
         }
     }
 
     // Process only the active cells
     for (const auto &cellIndex: activeCells) {
-        unsigned int row = cellIndex / size;
-        unsigned int col = cellIndex % size;
         int liveNeighbors = 0;
 
         // Check all neighbors
         for (const auto &offset: neighborOffsets) {
-            int neighborRow = row + offset.first;
-            int neighborCol = col + offset.second;
+            auto neighbourCell = cellIndex + offset;
 
-            if (neighborRow >= 0 && neighborRow < size &&
-                neighborCol >= 0 && neighborCol < size &&
-                states[neighborRow * size + neighborCol]) {
+            if (liveCells.find(neighbourCell) != liveCells.end()) {
                 liveNeighbors++;
             }
         }
 
         // Apply Game of Life rules
-        if (states[cellIndex]) { // Cell is alive
+        if (liveCells.find(cellIndex) != liveCells.end()) { // Cell is alive
             if (liveNeighbors < 2 || liveNeighbors > 3) {
-                nextLiveCellIndexes.erase(cellIndex); // Cell dies
+                nextLiveCell.erase(cellIndex); // Cell dies
             } else {
-                nextLiveCellIndexes.insert(cellIndex); // Cell lives
+                nextLiveCell.insert(cellIndex); // Cell lives
             }
         } else { // Cell is dead
             if (liveNeighbors == 3) {
-                nextLiveCellIndexes.insert(cellIndex); // Cell becomes alive
+                nextLiveCell.insert(cellIndex); // Cell becomes alive
             }
         }
     }
 
     // Update the live cell index set and states
-    liveCellIndexes = nextLiveCellIndexes;
-    states.clear();
-    for (const auto &cellIndex: liveCellIndexes) {
-        states[cellIndex] = true;
-    }
+    liveCells = nextLiveCell;
 }
-//void do_step() {
-//    std::vector<bool> nextStates(size * size, false); // Create a new state array for the next step
-//
-//    // Neighbor offsets: [x, y] positions relative to the current cell
-//    std::vector<std::pair<int, int>> neighborOffsets = {
-//            {-1, -1},   // Top-left
-//            {-1, 0},    // Top
-//            {-1, 1},    // Top-right
-//            {0,  -1},   // Left
-//            {0,  1},    // Right
-//            {1,  -1},   // Bottom-left
-//            {1,  0},    // Bottom
-//            {1,  1}     // Bottom-right
-//    };
-//
-//    for (unsigned int row = 0; row < size; ++row) {
-//        for (unsigned int col = 0; col < size; ++col) {
-//            unsigned int cellIndex = row * size + col;
-//            int liveNeighbors = 0;
-//
-//            // Check all neighbors
-//            for (const auto &offset: neighborOffsets) {
-//                int neighborRow = row + offset.first;
-//                int neighborCol = col + offset.second;
-//
-//                // Ensure the neighbor indices are within bounds
-//                if (neighborRow >= 0 && neighborRow < size &&
-//                    neighborCol >= 0 && neighborCol < size) {
-//                    // Count live neighbors
-//                    if (states[neighborRow * size + neighborCol]) {
-//                        liveNeighbors++;
-//                    }
-//                }
-//            }
-//
-//            // Apply Game of Life rules
-//            if (states[cellIndex]) { // Cell is alive
-//                if (liveNeighbors < 2 || liveNeighbors > 3) {
-//                    nextStates[cellIndex] = false; // Cell dies
-//                    liveCellIndexes.erase(cellIndex);
-//                } else {
-//                    nextStates[cellIndex] = true; // Cell lives
-//                    liveCellIndexes.insert(cellIndex);
-//                }
-//            } else { // Cell is dead
-//                if (liveNeighbors == 3) {
-//                    nextStates[cellIndex] = true; // Cell becomes alive
-//                    liveCellIndexes.insert(cellIndex);
-//                }
-//            }
-//        }
-//    }
-//
-//    // Update states to the new calculated states
-//    states = nextStates;
-//}
