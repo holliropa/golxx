@@ -2,6 +2,8 @@ set(SOURCES
         main.cpp
         application.hpp
         application.cpp
+        attribute_layout.hpp
+        buffer_usage.hpp
         mesh.hpp
         mesh.cpp
         shader.hpp

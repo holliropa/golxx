@@ -57,6 +57,8 @@ Application::Application() {
         throw std::runtime_error("GLAD Initialization Failed");
     }
 
+    glfwSwapInterval(1);
+
     glfwSetKeyCallback(pWindow, key_callback);
     glfwSetFramebufferSizeCallback(pWindow, framebuffer_size_callback);
     glfwSetCursorPosCallback(pWindow, mouse_position_callback);
@@ -116,6 +118,7 @@ void Application::run() {
             // Update the window title with both FPS and elapsed time
             std::string current_title = title + " | FPS: " + std::to_string(static_cast<int>(fps))
                                         + " | Time: " + std::to_string(static_cast<int>(elapsedTime)) + "s"
+                                        + " | Iteration: " + std::to_string(pGame->GetIteration())
                                         + " | Cells: " + std::to_string(pGame->GetLiveCellsCount());
             glfwSetWindowTitle(pWindow, current_title.c_str());
 

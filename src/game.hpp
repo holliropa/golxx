@@ -30,4 +30,6 @@ public:
     void Render();
 
     size_t GetLiveCellsCount() const;
+
+    unsigned int GetIteration() const;
 };

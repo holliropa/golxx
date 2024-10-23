@@ -21,6 +21,13 @@ struct Camera {
     float zoomLevel = 500.0f;
 };
 
+struct ViewBounds {
+    float left;
+    float right;
+    float bottom;
+    float top;
+};
+
 float widthF, heightF, windowAspectRatio;
 
 Shader *shader;
@@ -30,12 +37,26 @@ glm::mat4 projection;
 float cellSize = 1.0f;
 std::unordered_set<glm::ivec2> liveCells;
 glm::ivec2 lastCellPosition;
+unsigned int iteration;
 
 bool isAutoUpdate = false;
 float updateIntervalS = 0.5f;
 float lastUpdateS = 0.0f;
 
 glm::vec3 liveCellColor = glm::vec3(1.0f, 1.0f, 1.0f);
+
+ViewBounds get_camera_bounds() {
+    float halfWidth = windowAspectRatio * camera.zoomLevel;
+    float halfHeight = camera.zoomLevel;
+
+    ViewBounds bounds{};
+    bounds.left = camera.position.x - halfWidth;
+    bounds.right = camera.position.x + halfWidth;
+    bounds.bottom = camera.position.y - halfHeight;
+    bounds.top = camera.position.y + halfHeight;
+
+    return bounds;
+}
 
 Game::~Game() {
     shader = nullptr;
@@ -44,6 +65,8 @@ Game::~Game() {
     ShaderManager::Clear();
     MeshManager::Clear();
 }
+
+GLuint bufferVBO;
 
 void Game::Initialize() {
     load_shaders();
@@ -54,6 +77,13 @@ void Game::Initialize() {
     shader->setVec3f("color", liveCellColor);
 
     mesh = &MeshManager::Get("quad");
+
+    std::vector<AttributeLayout> layouts = {
+            {3, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 2, 0, 1}
+    };
+
+    bufferVBO = mesh->GenerateInstanceBuffer();
+    mesh->SetInstanceBufferAttributes(bufferVBO, layouts);
 }
 
 void Game::Resize(unsigned int width, unsigned int height) {
@@ -115,6 +145,7 @@ void Game::Update(float deltaTime) {
 
     if (DownKeys[glfwxx::KeyCode::C]) {
         liveCells.clear();
+        iteration = 0;
     }
 
     float baseSpeed = 1.0f;
@@ -153,28 +184,51 @@ void Game::Update(float deltaTime) {
 }
 
 void Game::Render() {
+
+    // Get the camera's visible bounds
+    ViewBounds bounds = get_camera_bounds();
+
+    int count = 0;
+    std::vector<glm::vec2> cells{};
+    for (const auto &liveCell: liveCells) {
+        // Get the cell's world position
+        float cellX = static_cast<float>(liveCell.x) * cellSize;
+        float cellY = static_cast<float>(liveCell.y) * cellSize;
+
+        // Check if the cell is within the visible bounds of the camera
+        if (cellX + cellSize < bounds.left || cellX > bounds.right ||
+            cellY + cellSize < bounds.bottom || cellY > bounds.top) {
+            continue; // Skip rendering this cell, it's outside the view
+        }
+
+        cells.emplace_back(cellX, cellY);
+    }
+
+    mesh->PutInstanceBufferData(bufferVBO,
+                                sizeof(float) * 2 * cells.size(),
+                                cells.data(),
+                                glfwxx::BufferUsage::DynamicDraw);
+
+
     shader->use();
     shader->setMatrix4fv("projection", camera.projection);
     shader->setMatrix4fv("view", glm::translate(glm::identity<glm::mat4>(), -camera.position));
 
-
     shader->setVec3f("color", liveCellColor);
-    for (const auto &liveCell: liveCells) {
-        auto cellPosition = glm::vec2(static_cast<float>(liveCell.x) * cellSize,
-                                      static_cast<float>(liveCell.y) * cellSize);
+    auto model = glm::identity<glm::mat4>();
+    model = glm::scale(model, glm::vec3(cellSize, cellSize, 1.0f));
+    model = glm::translate(model, glm::vec3(0.5f));
 
-        auto model = glm::identity<glm::mat4>();
-        model = glm::translate(model, glm::vec3(cellPosition, 0.0f));
-        model = glm::scale(model, glm::vec3(cellSize, cellSize, 1.0f));
-        model = glm::translate(model, glm::vec3(0.5f));
-        shader->setMatrix4fv("model", model);
-
-        mesh->draw();
-    }
+    shader->setMatrix4fv("model", model);
+    mesh->DrawInstanced(cells.size());
 }
 
 size_t Game::GetLiveCellsCount() const {
     return liveCells.size();
+}
+
+unsigned int Game::GetIteration() const {
+    return iteration;
 }
 
 void update_screen_size(unsigned int width, unsigned int height) {
@@ -293,4 +347,5 @@ void do_step() {
 
     // Update the live cell index set and states
     liveCells = nextLiveCell;
+    ++iteration;
 }

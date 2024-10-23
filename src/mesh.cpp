@@ -62,3 +62,81 @@ void Mesh::draw() {
     glDrawElements(GL_TRIANGLES, triangles.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
+
+void Mesh::DrawInstanced(int instanceCount) {
+    glBindVertexArray(VAO);
+    glDrawElementsInstanced(GL_TRIANGLES, triangles.size(), GL_UNSIGNED_INT, (GLvoid *) 0, instanceCount);
+    glBindVertexArray(0);
+}
+
+GLuint Mesh::GenerateInstanceBuffer() {
+    GLuint instanceVBO;
+    glGenBuffers(1, &instanceVBO);
+    instanceVBOs.push_back(instanceVBO);
+    return instanceVBO;
+}
+
+void Mesh::SetInstanceBufferAttributes(GLuint buffer,
+                                       const std::vector<AttributeLayout> &layout) {
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+
+    glBindVertexArray(VAO); // Bind the VAO to set attributes
+    for (const auto &attrib: layout) {
+        glEnableVertexAttribArray(attrib.index);
+        glVertexAttribPointer(attrib.index,
+                              attrib.size,
+                              attrib.type,
+                              attrib.normalized,
+                              attrib.stride,
+                              (void *) attrib.offset);
+        glVertexAttribDivisor(attrib.index, attrib.divisor);
+    }
+    glBindVertexArray(0); // Unbind the VAO after setting attributes
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void Mesh::PutInstanceBufferData(GLuint buffer,
+                                 GLsizei dataSize,
+                                 const void *data,
+                                 glfwxx::BufferUsage usage) {
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, dataSize, data, static_cast<GLenum>(usage));
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+GLuint Mesh::addInstanceBuffer(const std::vector<AttributeLayout> &layout, GLsizei dataSize, const void *data,
+                               glfwxx::BufferUsage usage) {
+    GLuint instanceVBO;
+
+    glGenBuffers(1, &instanceVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    glBufferData(GL_ARRAY_BUFFER, dataSize, data, static_cast<GLenum>(usage));
+
+    glBindVertexArray(VAO);
+
+    for (const auto &attrib: layout) {
+        glEnableVertexAttribArray(attrib.index);
+        glVertexAttribPointer(attrib.index,
+                              attrib.size,
+                              attrib.type,
+                              attrib.normalized,
+                              attrib.stride,
+                              (void *) attrib.offset);
+        glVertexAttribDivisor(attrib.index, attrib.divisor);
+    }
+
+    glBindVertexArray(0);
+
+    instanceVBOs.push_back(instanceVBO);
+
+    return instanceVBO;
+}
+
+void Mesh::updateInstanceBuffer(GLuint instanceVBO, GLsizei dataSize, const void *data) {
+    // Bind the instance VBO and update its data
+    glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, dataSize, data);  // Update buffer with new data
+    glBindBuffer(GL_ARRAY_BUFFER, 0);  // Unbind the buffer
+
+}
