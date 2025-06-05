@@ -1,6 +1,6 @@
 #include <iostream>
 #include <unordered_set>
-#include "game.hpp"
+#include "../include/golxx/game.h"
 #include "shader_manager.hpp"
 #include "mesh_manager.hpp"
 #include "files.hpp"
@@ -18,7 +18,7 @@ void do_step();
 struct Camera {
     glm::vec3 position{};
     glm::mat4 projection{};
-    float zoomLevel = 500.0f;
+    float zoomLevel = 200.0f;
 };
 
 struct ViewBounds {
@@ -33,14 +33,13 @@ float widthF, heightF, windowAspectRatio;
 Shader *shader;
 Mesh *mesh;
 Camera camera;
-glm::mat4 projection;
 float cellSize = 1.0f;
 std::unordered_set<glm::ivec2> liveCells;
 glm::ivec2 lastCellPosition;
 unsigned int iteration;
 
 bool isAutoUpdate = false;
-float updateIntervalS = 0.5f;
+float updateIntervalS = 0.25f;
 float lastUpdateS = 0.0f;
 
 glm::vec3 liveCellColor = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -146,6 +145,20 @@ void Game::Update(float deltaTime) {
     if (DownKeys[glfwxx::KeyCode::C]) {
         liveCells.clear();
         iteration = 0;
+    }
+
+    if (DownKeys[glfwxx::KeyCode::R]) {
+        liveCells.clear();
+        iteration = 0;
+
+        int size = 500;
+        for (int i = 0; i < size; ++i) {
+            for (int j = 0; j < size; ++j) {
+                if (rand() % 2 == 0) {
+                    liveCells.emplace(i, j);
+                }
+            }
+        }
     }
 
     float baseSpeed = 1.0f;
@@ -257,21 +270,21 @@ void load_shaders() {
 }
 
 void load_meshes() {
-    const std::vector<float> quadVertices = {
+    const std::vector quadVertices = {
             -0.5f, -0.5f, 0.0f,
             0.5f, -0.5f, 0.0f,
             0.5f, 0.5f, 0.0f,
             -0.5f, 0.5f, 0.0f
     };
 
-    const std::vector<float> quadNormals = {
+    const std::vector quadNormals = {
             0.0f, 0.0f, 1.0f,
             0.0f, 0.0f, 1.0f,
             0.0f, 0.0f, 1.0f,
             0.0f, 0.0f, 1.0f
     };
 
-    const std::vector<float> quadUVs = {
+    const std::vector quadUVs = {
             0.0f, 0.0f,
             1.0f, 0.0f,
             1.0f, 1.0f,
@@ -289,6 +302,18 @@ void load_meshes() {
                       quadTriangles,
                       "quad");
 }
+
+// Neighbor offsets: [x, y] positions relative to the current cell
+std::vector<glm::ivec2> neighborOffsets = {
+        {-1, -1},
+        {-1, 0},
+        {-1, 1},
+        {0,  -1},
+        {0,  1},
+        {1,  -1},
+        {1,  0},
+        {1,  1}
+};
 
 void do_step() {
     std::unordered_set<glm::ivec2> nextLiveCell;

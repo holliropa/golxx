@@ -1,0 +1,6 @@
+[submodule "extern/glad-wrap"]
+	path = extern/glad-wrap
+	url = https://github.com/holliropa/glad-wrap.git
+[submodule "extern/glfw-wrap"]
+	path = extern/glfw-wrap
+	url = https://github.com/holliropa/glfw-wrap.git
