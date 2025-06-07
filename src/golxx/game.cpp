@@ -4,8 +4,12 @@
 #include <unordered_set>
 
 #include "golxx/application.h"
+#include "golxx/camera.h"
 #include "golxx/engine.h"
+#include "golxx/game_object.h"
 #include "golxx/input.h"
+#include "golxx/player.h"
+#include "golxx/simulator.h"
 
 auto vertex_shader_source = R"(
 #version 330 core
@@ -37,12 +41,6 @@ void main() {
 })";
 
 namespace golxx {
-    struct Camera {
-        glm::vec3 position{};
-        glm::mat4 projection{};
-        float zoomLevel = 20.0f;
-    };
-
     struct ViewBounds {
         float left;
         float right;
@@ -62,8 +60,6 @@ namespace golxx {
 
     auto live_cell_color = glm::vec3(1.0f, 1.0f, 1.0f);
 
-    std::unordered_set<glm::ivec2> live_cells;
-    glm::ivec2 last_cell;
     glm::ivec2 window_size{};
 
     std::unique_ptr<glad::VertexArray> vertex_array;
@@ -71,25 +67,16 @@ namespace golxx {
     std::unique_ptr<glad::ArrayBuffer> instance_array_buffer;
     std::unique_ptr<glad::ElementArrayBuffer> element_array_buffer;
     std::unique_ptr<glad::Program> shader_program;
-    Camera camera;
+
+    std::shared_ptr<Simulator> simulator;
+    std::shared_ptr<Camera> camera;
+    std::vector<std::shared_ptr<GameObject>> gameObjects;
+
     float cell_size = 1.0f;
-    float move_speed = 15.0f;
-
-    void update_projection() {
-        const auto aspectRatio =
-            static_cast<float>(window_size.x) / static_cast<float>(window_size.y);
-
-        camera.projection = glm::ortho(
-            -1.0f * aspectRatio * camera.zoomLevel,
-            1.0f * aspectRatio * camera.zoomLevel,
-            -camera.zoomLevel,
-            camera.zoomLevel
-        );
-    }
 
     void set_window_size(const int width, const int height) {
         window_size = {width, height};
-        update_projection();
+        camera->set_size({width, height});
     }
 
     void init_mesh() {
@@ -184,8 +171,8 @@ namespace golxx {
     }
 
     ViewBounds get_camera_bounds(const Camera& camera, const float aspectRatio) {
-        const float halfWidth = aspectRatio * camera.zoomLevel;
-        const float halfHeight = camera.zoomLevel;
+        const float halfWidth = aspectRatio * camera.get_zoom_level();
+        const float halfHeight = camera.get_zoom_level();
 
         return {
             .left = camera.position.x - halfWidth,
@@ -193,75 +180,6 @@ namespace golxx {
             .bottom = camera.position.y - halfHeight,
             .top = camera.position.y + halfHeight,
         };
-    }
-
-    std::unordered_set<glm::ivec2> do_cycle(const std::unordered_set<glm::ivec2>& cells) {
-        std::unordered_set<glm::ivec2> nextCells{};
-        std::unordered_set<glm::ivec2> activeCells{};
-
-        const std::vector<glm::ivec2> neighborOffsets = {
-            {-1, -1},
-            {-1, 0},
-            {-1, 1},
-            {0, -1},
-            {0, 1},
-            {1, -1},
-            {1, 0},
-            {1, 1}
-        };
-
-        for (const auto& cell : cells) {
-            activeCells.insert(cell);
-
-            for (const auto& offset : neighborOffsets) {
-                activeCells.insert(cell + offset);
-            }
-        }
-
-        for (const auto& cell : activeCells) {
-            int liveNeighbors = 0;
-
-            for (const auto& offset : neighborOffsets) {
-                if (cells.find(cell + offset) != cells.end()) {
-                    liveNeighbors++;
-                }
-            }
-
-            if (cells.find(cell) != cells.end()) {
-                if (liveNeighbors < 2 || liveNeighbors > 3) {
-                    nextCells.erase(cell); // Cell dies
-                }
-                else {
-                    nextCells.insert(cell); // Cell lives
-                }
-            }
-            else {
-                if (liveNeighbors == 3) {
-                    nextCells.insert(cell); // Cell becomes alive
-                }
-            }
-        }
-
-        return nextCells;
-    }
-
-    glm::ivec2 get_movement_offset() {
-        glm::ivec2 offset{};
-
-        if (Input::GetKeyPressed(glfw::KeyCode::W)) {
-            offset.y++;
-        }
-        if (Input::GetKeyPressed(glfw::KeyCode::S)) {
-            offset.y--;
-        }
-        if (Input::GetKeyPressed(glfw::KeyCode::A)) {
-            offset.x--;
-        }
-        if (Input::GetKeyPressed(glfw::KeyCode::D)) {
-            offset.x++;
-        }
-
-        return offset;
     }
 
     Game::Game(Application& application, Engine& engine)
@@ -291,11 +209,16 @@ namespace golxx {
                 Input::HandleScroll(static_cast<float>(x), static_cast<float>(y));
             });
 
-        // window_.setCursorMode(glfw::CursorMode::Disabled);
         int w_width, w_height;
         window_.getWindowSize(&w_width, &w_height);
         window_.setCursorPosition(static_cast<double>(w_width) / 2,
                                   static_cast<double>(w_height) / 2);
+
+        simulator = std::make_shared<Simulator>();
+        camera = std::make_shared<Camera>(20.0f, glm::vec2(w_width, w_height));
+        gameObjects.emplace_back(std::make_shared<Player>(camera, simulator));
+
+        // window_.setCursorMode(glfw::CursorMode::Disabled);
         set_window_size(w_width, w_height);
 
         glad::Enable(glad::Capability::DepthTest);
@@ -303,6 +226,10 @@ namespace golxx {
 
         init_mesh();
         init_shaders();
+
+        for (const auto& gameObject : gameObjects) {
+            gameObject->init();
+        }
     }
 
     Game::~Game() {
@@ -311,6 +238,9 @@ namespace golxx {
         instance_array_buffer.reset();
         element_array_buffer.reset();
         shader_program.reset();
+
+        simulator.reset();
+        camera.reset();
     }
 
     void Game::run() {
@@ -338,48 +268,14 @@ namespace golxx {
              * UPDATE
              */
 
-            if (const auto& scroll = Input::GetScrollOffset(); scroll.y != 0.0f) {
-                const int scrollOffset = scroll.y * std::max(static_cast<int>(0.1f * camera.zoomLevel), 1);;
-                camera.zoomLevel = std::max(camera.zoomLevel - scrollOffset, 1.0f);
-                update_projection();
-            }
-
-            if (const auto& movement = get_movement_offset(); movement != glm::zero<glm::ivec2>()) {
-                camera.position += glm::vec3(movement.x, movement.y, 0.0f) * cell_size * delta * move_speed;
+            for (const auto& gameObject : gameObjects) {
+                gameObject->update(delta);
             }
 
             if (Input::GetKeyPressed(glfw::KeyCode::Space) || Input::GetKeyDown(glfw::KeyCode::LeftShift)) {
-                live_cells = do_cycle(live_cells);
-            }
-
-            if (Input::GetMouseButtonPressed(glfw::MouseButton::Left)) {
-                const auto cursor = Input::GetCursorPosition();
-
-                glm::vec4 ndcPos(
-                    2.0f * cursor.x / static_cast<float>(window_size.x) - 1.0f,
-                    1.0f - 2.0f * cursor.y / static_cast<float>(window_size.y),
-                    0.0f,
-                    1.0f);
-
-                glm::mat4 inverseProjView = glm::inverse(
-                    camera.projection * glm::translate(glm::identity<glm::mat4>(), -camera.position));
-                glm::vec4 worldPos = inverseProjView * ndcPos;
-
-                worldPos /= worldPos.w;
-
-                const auto column = static_cast<int>(std::floor(worldPos.x));
-                const auto row = static_cast<int>(std::floor(worldPos.y));
-                auto cellPosition = glm::ivec2(column, row);
-
-                if (cellPosition != last_cell) {
-                    last_cell = cellPosition;
-                    if (live_cells.find(cellPosition) != live_cells.end()) {
-                        live_cells.erase(cellPosition);
-                    }
-                    else {
-                        live_cells.insert(cellPosition);
-                    }
-                }
+                simulator->run_cycle();
+                std::cout << "Generation: " << simulator->getGeneration() <<
+                    ". Population: " << simulator->getCells().size() << "\n";
             }
 
             /*
@@ -389,18 +285,22 @@ namespace golxx {
             glad::ClearBuffers().Color().Depth();
             glad::ClearColor(0.1f, 0.4f, 0.7f);
 
+            for (const auto& gameObject : gameObjects) {
+                gameObject->render();
+            }
+
             glad::Bind(*shader_program);
-            glad::UniformMat4(*shader_program, "projection").set(glm::value_ptr(camera.projection));
-            const auto view = glm::translate(glm::identity<glm::mat4>(), -camera.position);
+            glad::UniformMat4(*shader_program, "projection").set(glm::value_ptr(camera->get_projection()));
+            const auto view = glm::translate(glm::identity<glm::mat4>(), -camera->position);
             glad::UniformMat4(*shader_program, "view").set(glm::value_ptr(view));
             auto model = glm::identity<glm::mat4>();
             model = glm::scale(model, glm::vec3(cell_size, cell_size, 1.0f));
             model = glm::translate(model, glm::vec3(0.5f));
             glad::UniformMat4(*shader_program, "model").set(glm::value_ptr(model));
 
-            std::vector<CellInstanceData> cells(live_cells.size());
+            std::vector<CellInstanceData> cells(simulator->getCells().size());
             unsigned i = 0;
-            for (const auto& liveCell : live_cells) {
+            for (const auto& liveCell : simulator->getCells()) {
                 cells[i++] = {
                     .position = {
                         static_cast<float>(liveCell.x) * cell_size,

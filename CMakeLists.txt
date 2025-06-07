@@ -17,6 +17,8 @@ add_executable(${PROJECT_NAME}
         src/golxx/engine.cpp
         src/golxx/game.cpp
         src/golxx/input.cpp
+        src/golxx/player.cpp
+        src/golxx/simulator.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
