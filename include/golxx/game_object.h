@@ -9,6 +9,6 @@ namespace golxx {
 
         virtual void update(float deltaTime) {}
 
-        virtual void render() {}
+        virtual void render(const std::shared_ptr<Camera>& camera) {}
     };
 }

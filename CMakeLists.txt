@@ -16,6 +16,7 @@ add_executable(${PROJECT_NAME}
         src/golxx/application.cpp
         src/golxx/engine.cpp
         src/golxx/game.cpp
+        src/golxx/grid_renderer.cpp
         src/golxx/input.cpp
         src/golxx/player.cpp
         src/golxx/simulator.cpp
