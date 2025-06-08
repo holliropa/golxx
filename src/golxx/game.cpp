@@ -3,6 +3,7 @@
 #include <iostream>
 #include "golxx/application.h"
 #include "golxx/camera.h"
+#include "golxx/config_manager.h"
 #include "golxx/engine.h"
 #include "golxx/game_object.h"
 #include "golxx/grid_renderer.h"
@@ -12,27 +13,6 @@
 
 
 namespace golxx {
-    struct ViewBounds {
-        float left;
-        float right;
-        float bottom;
-        float top;
-    };
-
-    auto live_cell_color = glm::vec3(1.0f, 1.0f, 1.0f);
-    float cell_size = 1.0f;
-
-    glm::ivec2 window_size{};
-
-    std::shared_ptr<Simulator> simulator;
-    std::shared_ptr<Camera> camera;
-    std::vector<std::shared_ptr<GameObject>> gameObjects;
-
-    void set_window_size(const int width, const int height) {
-        window_size = {width, height};
-        camera->set_size({width, height});
-    }
-
     Game::Game(Application& application, Engine& engine)
         : application_(application),
           engine_(engine),
@@ -48,8 +28,7 @@ namespace golxx {
         window_.framebufferSizeEvent.set(
             [this](const int width, const int height) {
                 glad::Viewport(width, height);
-
-                set_window_size(width, height);
+                camera_->set_size({width, height});
             });
         window_.cursorPosEvent.set(
             [](const double x, const double y) {
@@ -60,30 +39,31 @@ namespace golxx {
                 Input::HandleScroll(static_cast<float>(x), static_cast<float>(y));
             });
 
+        ConfigManager::get().loadFromFile("config.json");
+        const auto& config = ConfigManager::get().getConfig();
+
         int w_width, w_height;
         window_.getWindowSize(&w_width, &w_height);
-        window_.setCursorPosition(static_cast<double>(w_width) / 2,
-                                  static_cast<double>(w_height) / 2);
 
-        simulator = std::make_shared<Simulator>();
-        camera = std::make_shared<Camera>(20.0f, glm::vec2(w_width, w_height));
-        gameObjects.emplace_back(std::make_shared<Player>(camera, simulator));
-        gameObjects.emplace_back(std::make_shared<GridRenderer>(simulator, cell_size, live_cell_color));
+        simulator_ = std::make_shared<Simulator>();
+        camera_ = std::make_shared<Camera>(20.0f, glm::vec2(w_width, w_height));
+        gameObjects_.emplace_back(std::make_shared<Player>(camera_, simulator_, config.playerSpeed));
+        gameObjects_.emplace_back(std::make_shared<GridRenderer>(
+            simulator_,
+            config.liveCellColor));
 
-        set_window_size(w_width, w_height);
+        camera_->set_size({w_width, w_height});
 
-        for (const auto& gameObject : gameObjects) {
+        for (const auto& gameObject : gameObjects_) {
             gameObject->init();
         }
     }
 
-    Game::~Game() {
-        gameObjects.clear();
-        simulator.reset();
-        camera.reset();
-    }
+    Game::~Game() = default;
 
     void Game::run() {
+        const auto& config = ConfigManager::get().getConfig();;
+
         auto last_time = glfw::getTime();
         auto last_FPS_update_time = glfw::getTime();
         unsigned frameCount = 0;
@@ -108,12 +88,12 @@ namespace golxx {
              * UPDATE
              */
 
-            for (const auto& gameObject : gameObjects) {
+            for (const auto& gameObject : gameObjects_) {
                 gameObject->update(delta);
             }
 
             if (Input::GetKeyPressed(glfw::KeyCode::Space) || Input::GetKeyDown(glfw::KeyCode::LeftShift)) {
-                simulator->run_cycle();
+                simulator_->run_cycle();
             }
 
             /*
@@ -121,10 +101,11 @@ namespace golxx {
              */
 
             glad::ClearBuffers().Color().Depth();
-            glad::ClearColor(0.1f, 0.4f, 0.7f);
+            const auto& bgColor = config.backgroundColor;
+            glad::ClearColor(bgColor.r, bgColor.g, bgColor.b);
 
-            for (const auto& gameObject : gameObjects) {
-                gameObject->render(camera);
+            for (const auto& gameObject : gameObjects_) {
+                gameObject->render(camera_);
             }
 
             if (Input::GetKeyDown(glfw::KeyCode::Escape)) {

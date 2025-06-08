@@ -8,10 +8,9 @@
 namespace golxx {
     class Player final : public GameObject {
     public:
-        float speed = 1.0f;
-
         explicit Player(const std::shared_ptr<Camera>& camera,
-                        const std::shared_ptr<Simulator>& simulator);
+                        const std::shared_ptr<Simulator>& simulator,
+                        float speed);
         ~Player() override = default;
 
         void update(float deltaTime) override;
@@ -22,6 +21,8 @@ namespace golxx {
     private:
         std::shared_ptr<Camera> camera_;
         std::shared_ptr<Simulator> simulator_;
+
+        float speed_;
 
         bool is_drawing_line_ = false;
         bool drawing_state_ = false;

@@ -54,7 +54,7 @@ void main() {
         const auto view = glm::translate(glm::identity<glm::mat4>(), -camera->position);
         glad::UniformMat4(*shader_program_, "view").set(glm::value_ptr(view));
         auto model = glm::identity<glm::mat4>();
-        model = glm::scale(model, glm::vec3(cell_size_, cell_size_, 1.0f));
+        model = glm::scale(model, glm::vec3(1.0f));
         model = glm::translate(model, glm::vec3(0.5f));
         glad::UniformMat4(*shader_program_, "model").set(glm::value_ptr(model));
 
@@ -62,10 +62,7 @@ void main() {
         unsigned i = 0;
         for (const auto& liveCell : simulator_->getCells()) {
             cells[i++] = {
-                .position = {
-                    static_cast<float>(liveCell.x) * cell_size_,
-                    static_cast<float>(liveCell.y) * cell_size_,
-                },
+                .position = liveCell
             };
         }
 

@@ -22,13 +22,15 @@ namespace golxx {
     }
 
     Player::Player(const std::shared_ptr<Camera>& camera,
-                   const std::shared_ptr<Simulator>& simulator)
+                   const std::shared_ptr<Simulator>& simulator,
+                   const float speed)
         : camera_(camera),
-          simulator_(simulator) {}
+          simulator_(simulator),
+          speed_(speed) {}
 
     void Player::update(const float deltaTime) {
         if (const auto& movement = get_movement_offset(); movement != glm::zero<glm::ivec2>()) {
-            camera_->position += glm::vec3(movement.x, movement.y, 0.0f) * speed * deltaTime;
+            camera_->position += glm::vec3(movement.x, movement.y, 0.0f) * speed_ * deltaTime;
         }
 
         const auto cursorWorldPos = camera_->cursor_to_world(Input::GetCursorPosition());

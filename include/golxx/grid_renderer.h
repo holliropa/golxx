@@ -10,10 +10,8 @@ namespace golxx {
     class GridRenderer final : public GameObject {
     public:
         explicit GridRenderer(const std::shared_ptr<Simulator>& simulator,
-                              const float cell_size,
                               const glm::vec3& live_cell_color)
             : simulator_(simulator),
-              cell_size_(cell_size),
               live_cell_color_(live_cell_color) {}
 
         ~GridRenderer() override = default;
@@ -37,8 +35,6 @@ namespace golxx {
 
         std::shared_ptr<Simulator> simulator_;
 
-
-        float cell_size_;
         glm::vec3 live_cell_color_;
     };
 }

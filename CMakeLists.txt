@@ -14,6 +14,7 @@ add_subdirectory(extern/glm)
 add_executable(${PROJECT_NAME}
         src/main.cpp
         src/golxx/application.cpp
+        src/golxx/config_manager.cpp
         src/golxx/engine.cpp
         src/golxx/game.cpp
         src/golxx/grid_renderer.cpp
