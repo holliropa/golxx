@@ -1,7 +1,7 @@
 #pragma once
 
 #include "application.h"
- #include "camera.h"
+#include "camera.h"
 #include "engine.h"
 #include "game_object.h"
 #include "simulator.h"
@@ -14,6 +14,10 @@ namespace golxx {
         ~Game();
 
         void run();
+
+    private:
+        void update(float deltaTime);
+        void render();
 
     private:
         Application& application_;

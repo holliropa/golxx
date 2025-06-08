@@ -5,11 +5,13 @@
 #include "golxx/camera.h"
 #include "golxx/config_manager.h"
 #include "golxx/engine.h"
+#include "golxx/fps_counter.h"
 #include "golxx/game_object.h"
 #include "golxx/grid_renderer.h"
 #include "golxx/input.h"
 #include "golxx/player.h"
 #include "golxx/simulator.h"
+#include "golxx/time_manager.h"
 
 
 namespace golxx {
@@ -39,6 +41,8 @@ namespace golxx {
                 Input::HandleScroll(static_cast<float>(x), static_cast<float>(y));
             });
 
+        window_.setSwapInterval(1);
+
         ConfigManager::get().loadFromFile("config.json");
         const auto& config = ConfigManager::get().getConfig();
 
@@ -62,57 +66,46 @@ namespace golxx {
     Game::~Game() = default;
 
     void Game::run() {
-        const auto& config = ConfigManager::get().getConfig();;
-
-        auto last_time = glfw::getTime();
-        auto last_FPS_update_time = glfw::getTime();
-        unsigned frameCount = 0;
+        TimeManager timeManager;
+        FPSCounter fpsCounter;
 
         while (!window_.shouldClose()) {
             glfwPollEvents();
             Input::Update();
 
-            const auto current_time = glfw::getTime();
-            const auto delta = static_cast<float>(current_time - last_time);
-            last_time = current_time;
+            const auto deltaTime = timeManager.getDeltaTime();
+            fpsCounter.update();
 
-            frameCount++;
-            const auto time_since_FPS_update = current_time - last_FPS_update_time;
-            if (time_since_FPS_update > 1.0) {
-                const auto fps = static_cast<double>(frameCount) / time_since_FPS_update;
-                std::cout << "FPS: " << fps << '\n';
-                last_FPS_update_time = current_time;
-                frameCount = 0;
-            }
-            /*
-             * UPDATE
-             */
-
-            for (const auto& gameObject : gameObjects_) {
-                gameObject->update(delta);
-            }
-
-            if (Input::GetKeyPressed(glfw::KeyCode::Space) || Input::GetKeyDown(glfw::KeyCode::LeftShift)) {
-                simulator_->run_cycle();
-            }
-
-            /*
-             * RENDER
-             */
-
-            glad::ClearBuffers().Color().Depth();
-            const auto& bgColor = config.backgroundColor;
-            glad::ClearColor(bgColor.r, bgColor.g, bgColor.b);
-
-            for (const auto& gameObject : gameObjects_) {
-                gameObject->render(camera_);
-            }
+            update(deltaTime);
+            render();
 
             if (Input::GetKeyDown(glfw::KeyCode::Escape)) {
                 window_.setShouldClose(true);
             }
 
             window_.swapBuffers();
+        }
+    }
+
+    void Game::update(const float deltaTime) {
+        for (const auto& gameObject : gameObjects_) {
+            gameObject->update(deltaTime);
+        }
+
+        if (Input::GetKeyPressed(glfw::KeyCode::Space) || Input::GetKeyDown(glfw::KeyCode::LeftShift)) {
+            simulator_->run_cycle();
+        }
+    }
+
+    void Game::render() {
+        const auto& config = ConfigManager::get().getConfig();
+
+        glad::ClearBuffers().Color().Depth();
+        const auto& bgColor = config.backgroundColor;
+        glad::ClearColor(bgColor.r, bgColor.g, bgColor.b);
+
+        for (const auto& gameObject : gameObjects_) {
+            gameObject->render(camera_);
         }
     }
 }
