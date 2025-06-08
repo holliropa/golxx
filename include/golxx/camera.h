@@ -35,6 +35,22 @@ namespace golxx {
             update_projection();
         }
 
+        [[nodiscard]] glm::vec2 cursor_to_world(const glm::vec2 cursor) const {
+            const glm::vec4 ndcPos(
+                2.0f * cursor.x / static_cast<float>(size_.x) - 1.0f,
+                1.0f - 2.0f * cursor.y / static_cast<float>(size_.y),
+                0.0f,
+                1.0f);
+
+            const glm::mat4 inverseProjView = glm::inverse(
+                projection_ * glm::translate(glm::identity<glm::mat4>(), -position));
+            glm::vec4 worldPos = inverseProjView * ndcPos;
+
+            worldPos /= worldPos.w;
+
+            return {worldPos.x, worldPos.y};
+        }
+
     private:
         void update_projection() {
             const auto aspect_ratio = size_.x / size_.y;

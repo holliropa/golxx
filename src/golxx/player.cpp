@@ -21,22 +21,6 @@ namespace golxx {
         return offset;
     }
 
-    glm::ivec2 cursor_to_grid(const glm::ivec2& cursor, const std::shared_ptr<Camera>& camera) {
-        const glm::vec4 ndcPos(
-            2.0f * cursor.x / static_cast<float>(camera->get_size().x) - 1.0f,
-            1.0f - 2.0f * cursor.y / static_cast<float>(camera->get_size().y),
-            0.0f,
-            1.0f);
-
-        const glm::mat4 inverseProjView = glm::inverse(
-            camera->get_projection() * glm::translate(glm::identity<glm::mat4>(), -camera->position));
-        glm::vec4 worldPos = inverseProjView * ndcPos;
-
-        worldPos /= worldPos.w;
-
-        return {std::floor(worldPos.x), std::floor(worldPos.y)};
-    }
-
     Player::Player(const std::shared_ptr<Camera>& camera,
                    const std::shared_ptr<Simulator>& simulator)
         : camera_(camera),
@@ -47,14 +31,26 @@ namespace golxx {
             camera_->position += glm::vec3(movement.x, movement.y, 0.0f) * speed * deltaTime;
         }
 
+        const auto cursorWorldPos = camera_->cursor_to_world(Input::GetCursorPosition());
+
         if (const auto& scroll = Input::GetScrollOffset(); scroll.y != 0.0f) {
-            auto zoomLevel = camera_->get_zoom_level();
-            const int scrollOffset = scroll.y * std::max(static_cast<int>(0.1f * zoomLevel), 1);
-            zoomLevel = std::max(zoomLevel - scrollOffset, 1.0f);
-            camera_->set_zoom_level(zoomLevel);
+            const auto zoomLevel = camera_->get_zoom_level();
+            const auto scrollOffset = scroll.y * std::max(0.1f * zoomLevel, 1.0f);
+            const auto newZoomLevel = std::max(zoomLevel - scrollOffset, 1.0f);
+
+            camera_->set_zoom_level(newZoomLevel);
+
+            // Calculate world position after zoom change
+            const auto worldPosAfter = camera_->cursor_to_world(Input::GetCursorPosition());
+
+            // Adjust camera position to keep cursor at same world position
+            const auto offset = cursorWorldPos - worldPosAfter;
+            camera_->position += glm::vec3(offset.x, offset.y, 0.0f);
         }
 
-        const auto current_cell = cursor_to_grid(Input::GetCursorPosition(), camera_);
+        const auto current_cell = glm::ivec2(
+            static_cast<int>(std::floor(cursorWorldPos.x)),
+            static_cast<int>(std::floor(cursorWorldPos.y)));
 
         if (Input::GetMouseButtonDown(glfw::MouseButton::Left)) {
             is_drawing_line_ = true;
