@@ -1,4 +1,5 @@
 #include "golxx/simulator.h"
+#include <unordered_map>
 
 namespace golxx {
     void Simulator::set_state(const glm::ivec2 cell, const bool state) {
@@ -12,52 +13,40 @@ namespace golxx {
 
     void Simulator::run_cycle() {
         std::unordered_set<glm::ivec2> nextCells{};
-        std::unordered_set<glm::ivec2> activeCells{};
+        std::unordered_map<glm::ivec2, int> neighborCounts{};
 
         const std::vector<glm::ivec2> neighborOffsets = {
-            {-1, -1},
-            {-1, 0},
-            {-1, 1},
-            {0, -1},
-            {0, 1},
-            {1, -1},
-            {1, 0},
-            {1, 1}
+            {-1, -1}, {-1, 0}, {-1, 1},
+            {0, -1}, {0, 1},
+            {1, -1}, {1, 0}, {1, 1}
         };
 
+        // Calculate neighbor counts for all relevant cells
         for (const auto& cell : cells_) {
-            activeCells.insert(cell);
-
             for (const auto& offset : neighborOffsets) {
-                activeCells.insert(cell + offset);
+                glm::ivec2 neighbor = cell + offset;
+                neighborCounts[neighbor]++;
             }
         }
 
-        for (const auto& cell : activeCells) {
-            int liveNeighbors = 0;
-
-            for (const auto& offset : neighborOffsets) {
-                if (cells_.find(cell + offset) != cells_.end()) {
-                    liveNeighbors++;
-                }
-            }
-
+        // Apply Conway's Game of Life rules
+        for (const auto& [cell, count] : neighborCounts) {
             if (cells_.find(cell) != cells_.end()) {
-                if (liveNeighbors < 2 || liveNeighbors > 3) {
-                    nextCells.erase(cell); // Cell dies
+                // Live cell with 2 or 3 neighbors survives
+                if (count == 2 || count == 3) {
+                    nextCells.insert(cell);
                 }
-                else {
-                    nextCells.insert(cell); // Cell lives
-                }
+                // Otherwise it dies (underpopulation or overpopulation)
             }
             else {
-                if (liveNeighbors == 3) {
-                    nextCells.insert(cell); // Cell becomes alive
+                // Dead cell with exactly 3 neighbors becomes alive
+                if (count == 3) {
+                    nextCells.insert(cell);
                 }
             }
         }
 
-        cells_ = nextCells;
+        cells_ = std::move(nextCells);
         generation_++;
     }
 }
