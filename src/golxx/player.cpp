@@ -21,6 +21,72 @@ namespace golxx {
         return offset;
     }
 
+    bool get_cell_state(const NodePtr& node, const int x, const int y) {
+        if (!node) return false;
+
+        if (node->level == 0) {
+            return node->alive;
+        }
+
+        const int half_size = 1 << (node->level - 1);
+
+        if (x >= 0 && y >= 0) {
+            return get_cell_state(node->ne, x - half_size, y - half_size);
+        }
+
+        if (x >= 0) {
+            return get_cell_state(node->se, x - half_size, y + half_size);
+        }
+
+        if (y >= 0) {
+            return get_cell_state(node->nw, x + half_size, y - half_size);
+        }
+
+        return get_cell_state(node->sw, x + half_size, y + half_size);
+    }
+
+    NodePtr ensure_tree_size(NodePtr root, int x, int y) {
+        if (!root) {
+            const auto dead = make_leaf(false);
+            root = make_node(dead, dead, dead, dead);
+        }
+
+        while (root) {
+            const int half_size = 1 << (root->level - 1);
+            if (x >= -half_size && x < half_size && y >= -half_size && y < half_size) {
+                break;
+            }
+
+            auto dead = make_leaf(false);
+            auto empty_quadrant = root;
+
+            for (int i = 0; i < root->level - 1; ++i) {
+                empty_quadrant = make_node(dead, dead, dead, dead);
+                dead = empty_quadrant;
+            }
+
+            // Determine which quadrant the current root should be in the expanded tree
+            if (x >= 0 && y >= 0) {
+                // Current root becomes SW, expand to NE
+                root = make_node(empty_quadrant, empty_quadrant, root, empty_quadrant);
+            }
+            else if (x >= 0) {
+                // Current root becomes NW, expand to SE
+                root = make_node(root, empty_quadrant, empty_quadrant, empty_quadrant);
+            }
+            else if (y >= 0) {
+                // Current root becomes SE, expand to NW
+                root = make_node(empty_quadrant, empty_quadrant, empty_quadrant, root);
+            }
+            else {
+                // Current root becomes NE, expand to SW
+                root = make_node(empty_quadrant, root, empty_quadrant, empty_quadrant);
+            }
+        }
+
+        return root;
+    }
+
     Player::Player(const std::shared_ptr<Camera>& camera,
                    const std::shared_ptr<Simulator>& simulator,
                    const float speed)
@@ -57,8 +123,16 @@ namespace golxx {
         if (Input::GetMouseButtonDown(glfw::MouseButton::Left)) {
             is_drawing_line_ = true;
             last_cell_ = current_cell;
-            drawing_state_ = simulator_->getCells().find(current_cell) == simulator_->getCells().end();
-            simulator_->set_state(current_cell, drawing_state_);
+
+            bool current_state = false;
+            if (simulator_->root) {
+                current_state = get_cell_state(simulator_->root, current_cell.x, current_cell.y);
+            }
+
+            drawing_state_ = !current_state;
+
+            simulator_->root = ensure_tree_size(simulator_->root, current_cell.x, current_cell.y);
+            simulator_->root = set(simulator_->root, current_cell.x, current_cell.y, drawing_state_);
         }
         else if (Input::GetMouseButtonUp(glfw::MouseButton::Left)) {
             is_drawing_line_ = false;
@@ -78,7 +152,8 @@ namespace golxx {
 
         glm::ivec2 current = from;
         while (true) {
-            simulator_->set_state(current, toggle);
+            simulator_->root = ensure_tree_size(simulator_->root, current.x, current.y);
+            simulator_->root = set(simulator_->root, current.x, current.y, toggle);
 
             if (current == to) break;
 

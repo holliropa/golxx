@@ -1,9 +1,10 @@
 #include "golxx/game.h"
 
-#include <iostream>
 #include "golxx/application.h"
+#include "golxx/background.h"
 #include "golxx/camera.h"
 #include "golxx/config_manager.h"
+#include "golxx/cube.h"
 #include "golxx/engine.h"
 #include "golxx/fps_counter.h"
 #include "golxx/game_object.h"
@@ -52,6 +53,8 @@ namespace golxx {
         simulator_ = std::make_shared<Simulator>();
         camera_ = std::make_shared<Camera>(20.0f, glm::vec2(w_width, w_height));
         gameObjects_.emplace_back(std::make_shared<Player>(camera_, simulator_, config.playerSpeed));
+        gameObjects_.emplace_back(std::make_shared<Cube>());
+        gameObjects_.emplace_back(std::make_shared<Background>());
         gameObjects_.emplace_back(std::make_shared<GridRenderer>(
             simulator_,
             config.liveCellColor));

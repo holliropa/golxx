@@ -1,7 +1,10 @@
 #include "golxx/grid_renderer.h"
 
+#include <iostream>
+#include <bits/ostream.tcc>
+
 namespace golxx {
-    auto vertex_shader_source = R"(
+    auto grid_vertex_shader_source = R"(
 #version 330 core
 
 layout (location = 0) in vec3 a_position;
@@ -12,22 +15,27 @@ layout (location = 3) in vec2 a_instance_position;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform vec3 color;
+
+out vec3 Color;
 
 void main() {
     vec3 position = a_position + vec3(a_instance_position, 0.0);
 
     gl_Position = projection * view * model * vec4(position, 1.0);
+
+    Color = color;
 })";
 
-    auto fragment_shader_source = R"(
+    auto grid_fragment_shader_source = R"(
 #version 330 core
+
+in vec3 Color;
 
 out vec4 FragColor;
 
-uniform vec3 color;
-
 void main() {
-    FragColor = vec4(color, 1.0);
+        FragColor = vec4(Color, 1.0);
 })";
 
     struct CellVertex {
@@ -39,6 +47,30 @@ void main() {
     struct CellInstanceData {
         glm::vec2 position;
     };
+
+    void extract_living_cells(const NodePtr& node, int x, int y, std::vector<glm::ivec2>& cells) {
+        if (!node) return;
+
+        if (node->level == 0) {
+            if (node->alive) {
+                cells.emplace_back(x, y);
+            }
+            return;
+        }
+        if (node->level == 1) {
+            extract_living_cells(node->nw, x - 1, y, cells);
+            extract_living_cells(node->ne, x, y, cells);
+            extract_living_cells(node->sw, x - 1, y - 1, cells);
+            extract_living_cells(node->se, x, y - 1, cells);
+            return;
+        }
+
+        const int half_size = (1 << (node->level - 2));
+        extract_living_cells(node->nw, x - half_size, y + half_size, cells);
+        extract_living_cells(node->ne, x + half_size, y + half_size, cells);
+        extract_living_cells(node->sw, x - half_size, y - half_size, cells);
+        extract_living_cells(node->se, x + half_size, y - half_size, cells);
+    }
 
     void GridRenderer::init() {
         init_mesh();
@@ -54,15 +86,20 @@ void main() {
         const auto view = glm::translate(glm::identity<glm::mat4>(), -camera->position);
         glad::UniformMat4(*shader_program_, "view").set(glm::value_ptr(view));
         auto model = glm::identity<glm::mat4>();
-        model = glm::scale(model, glm::vec3(1.0f));
         model = glm::translate(model, glm::vec3(0.5f));
+        model = glm::scale(model, glm::vec3(1.0f));
         glad::UniformMat4(*shader_program_, "model").set(glm::value_ptr(model));
 
-        std::vector<CellInstanceData> cells(simulator_->getCells().size());
+        std::vector<glm::ivec2> live_cells;
+        if (simulator_->root) {
+            extract_living_cells(simulator_->root, 0, 0, live_cells);
+        }
+
+        std::vector<CellInstanceData> cells(live_cells.size());
         unsigned i = 0;
-        for (const auto& liveCell : simulator_->getCells()) {
+        for (const auto& live_cell : live_cells) {
             cells[i++] = {
-                .position = liveCell
+                .position = live_cell
             };
         }
 
@@ -160,10 +197,10 @@ void main() {
         shader_program_ = std::make_unique<glad::Program>();
 
         auto vertex_shader = glad::VertexShader();
-        vertex_shader.set_source(vertex_shader_source);
+        vertex_shader.set_source(grid_vertex_shader_source);
 
         auto fragment_shader = glad::FragmentShader();
-        fragment_shader.set_source(fragment_shader_source);
+        fragment_shader.set_source(grid_fragment_shader_source);
 
         shader_program_->attach_shader(vertex_shader, fragment_shader);
         shader_program_->link();

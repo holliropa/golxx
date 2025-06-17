@@ -14,13 +14,16 @@ add_subdirectory(extern/glm)
 add_executable(${PROJECT_NAME}
         src/main.cpp
         src/golxx/application.cpp
+        src/golxx/background.cpp
         src/golxx/config_manager.cpp
+        src/golxx/cube.cpp
         src/golxx/engine.cpp
         src/golxx/game.cpp
         src/golxx/grid_renderer.cpp
         src/golxx/input.cpp
         src/golxx/player.cpp
         src/golxx/simulator.cpp
+        src/hashlife/hashlife.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
