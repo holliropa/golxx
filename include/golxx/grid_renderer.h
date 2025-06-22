@@ -3,8 +3,8 @@
 
 #include "camera.h"
 #include "game_object.h"
-#include "simulator.h"
 #include "gl_common.h"
+#include "simulator.h"
 
 namespace golxx {
     class GridRenderer final : public GameObject {

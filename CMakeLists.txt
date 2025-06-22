@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 project("golxx")
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
 
 include(FetchContent)
@@ -13,6 +13,11 @@ add_subdirectory(extern/glm)
 
 add_executable(${PROJECT_NAME}
         src/main.cpp
+        src/game-of-life/node_factory/factory.cpp
+        src/game-of-life/node_factory/hash.cpp
+        src/game-of-life/node_factory/key.cpp
+        src/game-of-life/hashlife.cpp
+        src/game-of-life/node.cpp
         src/golxx/application.cpp
         src/golxx/background.cpp
         src/golxx/config_manager.cpp
@@ -23,7 +28,6 @@ add_executable(${PROJECT_NAME}
         src/golxx/input.cpp
         src/golxx/player.cpp
         src/golxx/simulator.cpp
-        src/hashlife/hashlife.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

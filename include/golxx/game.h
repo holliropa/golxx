@@ -5,6 +5,7 @@
 #include "engine.h"
 #include "game_object.h"
 #include "simulator.h"
+#include "../game-of-life/hashlife.h"
 
 namespace golxx {
     class Game {

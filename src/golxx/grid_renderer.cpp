@@ -1,7 +1,6 @@
 #include "golxx/grid_renderer.h"
 
 #include <iostream>
-#include <bits/ostream.tcc>
 
 namespace golxx {
     auto grid_vertex_shader_source = R"(
@@ -48,7 +47,7 @@ void main() {
         glm::vec2 position;
     };
 
-    void extract_living_cells(const NodePtr& node, int x, int y, std::vector<glm::ivec2>& cells) {
+    void extract_living_cells(gol::NodeRef node, int x, int y, std::vector<glm::ivec2>& cells) {
         if (!node) return;
 
         if (node->level == 0) {
@@ -58,18 +57,18 @@ void main() {
             return;
         }
         if (node->level == 1) {
-            extract_living_cells(node->nw, x - 1, y, cells);
-            extract_living_cells(node->ne, x, y, cells);
-            extract_living_cells(node->sw, x - 1, y - 1, cells);
-            extract_living_cells(node->se, x, y - 1, cells);
+            extract_living_cells(node->nw(), x - 1, y, cells);
+            extract_living_cells(node->ne(), x, y, cells);
+            extract_living_cells(node->sw(), x - 1, y - 1, cells);
+            extract_living_cells(node->se(), x, y - 1, cells);
             return;
         }
 
         const int half_size = (1 << (node->level - 2));
-        extract_living_cells(node->nw, x - half_size, y + half_size, cells);
-        extract_living_cells(node->ne, x + half_size, y + half_size, cells);
-        extract_living_cells(node->sw, x - half_size, y - half_size, cells);
-        extract_living_cells(node->se, x + half_size, y - half_size, cells);
+        extract_living_cells(node->nw(), x - half_size, y + half_size, cells);
+        extract_living_cells(node->ne(), x + half_size, y + half_size, cells);
+        extract_living_cells(node->sw(), x - half_size, y - half_size, cells);
+        extract_living_cells(node->se(), x + half_size, y - half_size, cells);
     }
 
     void GridRenderer::init() {
@@ -91,9 +90,7 @@ void main() {
         glad::UniformMat4(*shader_program_, "model").set(glm::value_ptr(model));
 
         std::vector<glm::ivec2> live_cells;
-        if (simulator_->root) {
-            extract_living_cells(simulator_->root, 0, 0, live_cells);
-        }
+        extract_living_cells(simulator_->get_root(), 0, 0, live_cells);
 
         std::vector<CellInstanceData> cells(live_cells.size());
         unsigned i = 0;

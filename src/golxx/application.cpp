@@ -1,4 +1,3 @@
-#include <iostream>
 #include "golxx/application.h"
 
 namespace golxx {

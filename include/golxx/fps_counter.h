@@ -6,8 +6,9 @@
 
 class FPSCounter {
 private:
-    double lastUpdateTime_ = 0.0;
     unsigned frameCount_ = 0;
+    double lastUpdateTime_ = 0.0;
+    double lastFPS_ = 0.0;
 
 public:
     void update() {
@@ -17,9 +18,14 @@ public:
 
         if (timeSinceUpdate > 1.0) {
             const auto fps = static_cast<double>(frameCount_) / timeSinceUpdate;
-            std::cout << "FPS: " << fps << '\n';
+            // std::cout << "FPS: " << fps << '\n';
             lastUpdateTime_ = currentTime;
             frameCount_ = 0;
+            lastFPS_ = fps;
         }
     }
+
+    unsigned getFrameCount() const { return frameCount_; }
+
+    double getFPS() const { return lastFPS_; }
 };

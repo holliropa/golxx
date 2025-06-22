@@ -11,7 +11,7 @@
 #include "golxx/grid_renderer.h"
 #include "golxx/input.h"
 #include "golxx/player.h"
-#include "golxx/simulator.h"
+#include "../../include/game-of-life/hashlife.h"
 #include "golxx/time_manager.h"
 
 
@@ -54,7 +54,7 @@ namespace golxx {
         camera_ = std::make_shared<Camera>(20.0f, glm::vec2(w_width, w_height));
         gameObjects_.emplace_back(std::make_shared<Player>(camera_, simulator_, config.playerSpeed));
         gameObjects_.emplace_back(std::make_shared<Cube>());
-        gameObjects_.emplace_back(std::make_shared<Background>());
+        gameObjects_.emplace_back(std::make_shared<Background>(simulator_));
         gameObjects_.emplace_back(std::make_shared<GridRenderer>(
             simulator_,
             config.liveCellColor));
@@ -78,6 +78,7 @@ namespace golxx {
 
             const auto deltaTime = timeManager.getDeltaTime();
             fpsCounter.update();
+            window_.setTitle((std::to_string(fpsCounter.getFPS()) + " FPS").c_str());
 
             update(deltaTime);
             render();
@@ -96,7 +97,7 @@ namespace golxx {
         }
 
         if (Input::GetKeyPressed(glfw::KeyCode::Space) || Input::GetKeyDown(glfw::KeyCode::LeftShift)) {
-            simulator_->run_cycle();
+            simulator_->evolve();
         }
     }
 
