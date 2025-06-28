@@ -1,11 +1,11 @@
 #pragma once
 #include <unordered_set>
-#include "glm_common.h"
+#include "bw/engine/glm.h"
 
 namespace golxx {
     class Simulator {
     public:
-        Simulator() : generation_(0) {}
+        Simulator(): cells_(), generation_(0) {}
         ~Simulator() = default;
 
         const std::unordered_set<glm::ivec2>& getCells() const {

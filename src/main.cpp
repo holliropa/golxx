@@ -1,17 +1,19 @@
 #include <iostream>
 
-#include "golxx/application.h"
-#include "golxx/engine.h"
-#include "golxx/game.h"
+#include "bw/engine/application.h"
+#include "bw/engine/engine.h"
+#include "game.h"
 
 constexpr unsigned int WIDTH = 800;
 constexpr unsigned int HEIGHT = 800;
 
 int main() {
     try {
-        golxx::Application application(WIDTH, HEIGHT, "Golxx");
-        golxx::Engine engine;
+        bw::engine::Application application(WIDTH, HEIGHT, "Game of Life");
+        bw::engine::Engine engine;
         golxx::Game game(application, engine);
+
+        game.init();
 
         game.run();
     } catch (const std::exception& e) {

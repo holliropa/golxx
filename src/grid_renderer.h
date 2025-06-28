@@ -1,18 +1,14 @@
 #pragma once
 #include <memory>
 
-#include "camera.h"
-#include "game_object.h"
 #include "simulator.h"
-#include "gl_common.h"
+#include "bw/engine/game_object.h"
+#include "bw/engine/gl.h"
 
 namespace golxx {
-    class GridRenderer final : public GameObject {
+    class GridRenderer final : public bw::engine::GameObject {
     public:
-        explicit GridRenderer(const std::shared_ptr<Simulator>& simulator,
-                              const glm::vec3& live_cell_color)
-            : simulator_(simulator),
-              live_cell_color_(live_cell_color) {}
+        explicit GridRenderer(const std::shared_ptr<Simulator>& simulator);
 
         ~GridRenderer() override = default;
 
@@ -20,7 +16,7 @@ namespace golxx {
 
         void update(float deltaTime) override;
 
-        void render(const std::shared_ptr<Camera>& camera) override;
+        void render(const std::shared_ptr<bw::engine::Camera>& camera) override;
 
     private:
         void init_mesh();

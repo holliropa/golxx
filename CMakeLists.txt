@@ -1,50 +1,24 @@
 cmake_minimum_required(VERSION 3.28)
 project("golxx")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
 
-include(FetchContent)
-
-add_subdirectory(extern/glad)
-add_subdirectory(extern/glfw)
-add_subdirectory(extern/glm)
+add_subdirectory(libs/bw-engine)
 
 add_executable(${PROJECT_NAME}
         src/main.cpp
-        src/golxx/application.cpp
-        src/golxx/config_manager.cpp
-        src/golxx/engine.cpp
-        src/golxx/game.cpp
-        src/golxx/grid_renderer.cpp
-        src/golxx/input.cpp
-        src/golxx/player.cpp
-        src/golxx/simulator.cpp
+        src/game.cpp
+        src/grid_renderer.cpp
+        src/player.cpp
+        src/simulator.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-        include
-        extern/glad/include
-        extern/glad-wrap/include
-        extern/glfw-wrap/include
+        bw-engine/include
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        glad
-        glfw
-        glm::glm
+        bw::engine
 )
-
-set(ASSETS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/assets")
-set(ASSETS_DEST_DIR "${CMAKE_BINARY_DIR}/assets")
-
-# Create a custom target for copying assets
-add_custom_target(copy_assets ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
-        COMMENT "Copying assets directory to build folder"
-)
-
-# Make the executable depend on the custom target
-add_dependencies(${PROJECT_NAME} copy_assets)

@@ -1,5 +1,6 @@
-#include "golxx/simulator.h"
+#include "simulator.h"
 #include <unordered_map>
+#include <vector>
 
 namespace golxx {
     void Simulator::set_state(const glm::ivec2 cell, const bool state) {
