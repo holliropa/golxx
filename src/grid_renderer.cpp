@@ -1,4 +1,4 @@
-#include "golxx/grid_renderer.h"
+#include "grid_renderer.h"
 
 namespace golxx {
     auto vertex_shader_source = R"(
@@ -40,6 +40,9 @@ void main() {
         glm::vec2 position;
     };
 
+    GridRenderer::GridRenderer(const std::shared_ptr<Simulator>& simulator)
+        : simulator_(simulator), live_cell_color_(glm::vec3(1.0f, 1.0f, 1.0f)) {}
+
     void GridRenderer::init() {
         init_mesh();
         init_shaders();
@@ -48,7 +51,7 @@ void main() {
     void GridRenderer::update(float deltaTime) {}
 
 
-    void GridRenderer::render(const std::shared_ptr<Camera>& camera) {
+    void GridRenderer::render(const std::shared_ptr<bw::engine::Camera>& camera) {
         glad::Bind(*shader_program_);
         glad::UniformMat4(*shader_program_, "projection").set(glm::value_ptr(camera->get_projection()));
         const auto view = glm::translate(glm::identity<glm::mat4>(), -camera->position);

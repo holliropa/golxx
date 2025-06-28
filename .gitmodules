@@ -1,0 +1,3 @@
+[submodule "libs/bw-engine"]
+	path = libs/bw-engine
+	url = https://github.com/holliropa/bw-engine.git
