@@ -35,16 +35,3 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         glfw
         glm::glm
 )
-
-set(ASSETS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/assets")
-set(ASSETS_DEST_DIR "${CMAKE_BINARY_DIR}/assets")
-
-# Create a custom target for copying assets
-add_custom_target(copy_assets ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${ASSETS_SOURCE_DIR} ${ASSETS_DEST_DIR}
-        COMMENT "Copying assets directory to build folder"
-)
-
-# Make the executable depend on the custom target
-add_dependencies(${PROJECT_NAME} copy_assets)
