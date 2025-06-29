@@ -1,13 +1,14 @@
 #pragma once
 #include <memory>
 
+#include "camera.h"
 #include "simulator.h"
 #include "bw/engine/game_object.h"
 
 namespace golxx {
     class Player final : public bw::engine::GameObject {
     public:
-        explicit Player(const std::shared_ptr<bw::engine::Camera>& camera,
+        explicit Player(const std::shared_ptr<Camera>& camera,
                         const std::shared_ptr<Simulator>& simulator);
         ~Player() override = default;
 
@@ -17,7 +18,7 @@ namespace golxx {
         void toggle_line_cells(glm::ivec2 from, glm::ivec2 to, bool toggle);
 
     private:
-        std::shared_ptr<bw::engine::Camera> camera_;
+        std::shared_ptr<Camera> camera_;
         std::shared_ptr<Simulator> simulator_;
 
         float speed_;

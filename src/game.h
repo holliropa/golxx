@@ -1,5 +1,6 @@
 #pragma once
 
+#include "camera.h"
 #include "simulator.h"
 #include "bw/engine/application.h"
 #include "bw/engine/engine.h"
@@ -13,6 +14,8 @@ namespace golxx {
         ~Game();
 
     private:
+        std::shared_ptr<Camera> main_camera_;
         std::shared_ptr<Simulator> simulator_;
+        size_t frame_buffer_event_handle_;
     };
 }

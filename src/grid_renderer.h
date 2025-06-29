@@ -16,13 +16,13 @@ namespace golxx {
 
         void update(float deltaTime) override;
 
-        void render(const std::shared_ptr<bw::engine::Camera>& camera) override;
+        void render(const bw::engine::Camera& camera) override;
 
     private:
         void init_mesh();
         void init_shaders();
 
-    private:
+
         std::unique_ptr<glad::VertexArray> vertex_array_;
         std::unique_ptr<glad::ArrayBuffer> array_buffer_;
         std::unique_ptr<glad::ArrayBuffer> instance_array_buffer_;

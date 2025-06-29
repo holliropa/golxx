@@ -51,11 +51,10 @@ void main() {
     void GridRenderer::update(float deltaTime) {}
 
 
-    void GridRenderer::render(const std::shared_ptr<bw::engine::Camera>& camera) {
+    void GridRenderer::render(const bw::engine::Camera& camera) {
         glad::Bind(*shader_program_);
-        glad::UniformMat4(*shader_program_, "projection").set(glm::value_ptr(camera->get_projection()));
-        const auto view = glm::translate(glm::identity<glm::mat4>(), -camera->position);
-        glad::UniformMat4(*shader_program_, "view").set(glm::value_ptr(view));
+        glad::UniformMat4(*shader_program_, "projection").set(glm::value_ptr(camera.get_projection()));
+        glad::UniformMat4(*shader_program_, "view").set(glm::value_ptr(camera.get_view()));
         auto model = glm::identity<glm::mat4>();
         model = glm::scale(model, glm::vec3(1.0f));
         model = glm::translate(model, glm::vec3(0.5f));

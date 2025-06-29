@@ -21,7 +21,7 @@ namespace golxx {
         return offset;
     }
 
-    Player::Player(const std::shared_ptr<bw::engine::Camera>& camera,
+    Player::Player(const std::shared_ptr<Camera>& camera,
                    const std::shared_ptr<Simulator>& simulator)
         : camera_(camera),
           simulator_(simulator),
