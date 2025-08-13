@@ -1,4 +1,4 @@
-#include "golxx/background.h"
+#include "background.h"
 
 namespace golxx {
     auto background_vertex_shader_source = R"(

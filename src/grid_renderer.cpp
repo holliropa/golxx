@@ -1,4 +1,4 @@
-#include "golxx/grid_renderer.h"
+#include "grid_renderer.h"
 
 #include <iostream>
 

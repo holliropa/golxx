@@ -1,13 +1,13 @@
-#include "golxx/golxx_game.h"
+#include "golxx_game.h"
 
 #include "bw/engine/input.h"
 
-#include "golxx/background.h"
-#include "golxx/camera.h"
-#include "golxx/config_manager.h"
-#include "golxx/cube.h"
-#include "golxx/grid_renderer.h"
-#include "golxx/player.h"
+#include "background.h"
+#include "camera.h"
+#include "config_manager.h"
+#include "cube.h"
+#include "grid_renderer.h"
+#include "player.h"
 #include "game-of-life/hashlife.h"
 
 

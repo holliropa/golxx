@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "golxx/golxx_game.h"
+#include "golxx_game.h"
 
 constexpr unsigned int WIDTH = 800;
 constexpr unsigned int HEIGHT = 800;

@@ -1,4 +1,4 @@
-#include "golxx/player.h"
+#include "player.h"
 
 #include <iostream>
 

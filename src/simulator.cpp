@@ -1,4 +1,4 @@
-#include "golxx/simulator.h"
+#include "simulator.h"
 
 #include <cmath>
 #include <iostream>

@@ -1,4 +1,4 @@
-#include "golxx/cube.h"
+#include "cube.h"
 
 namespace golxx {
     auto cube_vertex_shader_source = R"(

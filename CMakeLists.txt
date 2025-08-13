@@ -16,20 +16,17 @@ add_executable(${PROJECT_NAME}
         src/game-of-life/node_factory/key.cpp
         src/game-of-life/hashlife.cpp
         src/game-of-life/node.cpp
-        src/golxx/background.cpp
-        src/golxx/config_manager.cpp
-        src/golxx/cube.cpp
-        src/golxx/golxx_game.cpp
-        src/golxx/grid_renderer.cpp
-        src/golxx/player.cpp
-        src/golxx/simulator.cpp
+        src/background.cpp
+        src/cube.cpp
+        src/config_manager.cpp
+        src/golxx_game.cpp
+        src/grid_renderer.cpp
+        src/player.cpp
+        src/simulator.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         include
-#        extern/glad/include
-#        extern/glad-wrap/include
-#        extern/glfw-wrap/include
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
