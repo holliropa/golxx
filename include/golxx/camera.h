@@ -1,9 +1,10 @@
 #pragma once
 
-#include "glm_common.h"
+#include "bw/engine/camera.h"
+#include "bw/engine/glm.h"
 
 namespace golxx {
-    class Camera {
+    class Camera final : public bw::engine::Camera {
     public:
         glm::vec3 position{};
 
@@ -13,8 +14,12 @@ namespace golxx {
             update_projection();
         }
 
-        [[nodiscard]] const glm::mat4& get_projection() const {
+        glm::mat4 get_projection() const override {
             return projection_;
+        }
+
+        glm::mat4 get_view() const override {
+            return glm::translate(glm::identity<glm::mat4>(), -position);
         }
 
         [[nodiscard]] float get_zoom_level() const {

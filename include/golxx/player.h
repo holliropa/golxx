@@ -2,11 +2,13 @@
 #include <memory>
 
 #include "camera.h"
-#include "game_object.h"
 #include "simulator.h"
 
+#include "bw/engine/base_object.h"
+#include "bw/engine/glm.h"
+
 namespace golxx {
-    class Player final : public GameObject {
+    class Player final : public bw::engine::BaseObject {
     public:
         explicit Player(const std::shared_ptr<Camera>& camera,
                         const std::shared_ptr<Simulator>& simulator,

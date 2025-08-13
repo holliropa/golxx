@@ -1,7 +1,5 @@
 #include "golxx/cube.h"
 
-#include "golxx/input.h"
-
 namespace golxx {
     auto cube_vertex_shader_source = R"(
 #version 330 core
@@ -34,13 +32,12 @@ void main() {
         init_shaders();
     }
 
-    void Cube::render(const std::shared_ptr<Camera>& camera) {
+    void Cube::render(const bw::engine::Camera& camera) {
         glad::Bind(*shader_program_);
         glad::Bind(*vertex_array_);
 
-        glad::UniformMat4(*shader_program_, "projection").set(glm::value_ptr(camera->get_projection()));
-        const auto view = glm::translate(glm::identity<glm::mat4>(), -camera->position);
-        glad::UniformMat4(*shader_program_, "view").set(glm::value_ptr(view));
+        glad::UniformMat4(*shader_program_, "projection").set(glm::value_ptr(camera.get_projection()));
+        glad::UniformMat4(*shader_program_, "view").set(glm::value_ptr(camera.get_view()));
         auto model = glm::identity<glm::mat4>();
         model = glm::translate(model, glm::vec3(0.5f));
         model = glm::scale(model, glm::vec3(1.2f));

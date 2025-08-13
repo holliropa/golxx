@@ -1,6 +1,6 @@
 #pragma once
 
-#include "glm_common.h"
+#include "bw/engine/glm.h"
 #include <string>
 
 namespace golxx {

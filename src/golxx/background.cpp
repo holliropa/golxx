@@ -1,7 +1,5 @@
 #include "golxx/background.h"
 
-#include "golxx/input.h"
-
 namespace golxx {
     auto background_vertex_shader_source = R"(
 #version 330 core
@@ -51,7 +49,7 @@ void main() {
     }
 
 
-    void Background::render(const std::shared_ptr<Camera>& camera) {
+    void Background::render(const bw::engine::Camera& camera) {
         glad::Enable(glad::Capability::Blend);
         glad::BlendFunc(glad::BlendFunction::SrcAlpha, glad::BlendFunction::OneMinusSrcAlpha);
 
@@ -60,9 +58,8 @@ void main() {
         glad::Bind(*shader_program_);
         glad::Bind(*vertex_array_);
 
-        glad::UniformMat4(*shader_program_, "projection").set(glm::value_ptr(camera->get_projection()));
-        const auto view = glm::translate(glm::identity<glm::mat4>(), -camera->position);
-        glad::UniformMat4(*shader_program_, "view").set(glm::value_ptr(view));
+        glad::UniformMat4(*shader_program_, "projection").set(glm::value_ptr(camera.get_projection()));
+        glad::UniformMat4(*shader_program_, "view").set(glm::value_ptr(camera.get_view()));
 
         const auto size = std::pow(2, last_size_);
 

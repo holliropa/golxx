@@ -1,12 +1,11 @@
 #pragma once
 #include <memory>
 
-#include "camera.h"
-#include "game_object.h"
-#include "gl_common.h"
+#include "bw/engine/base_object.h"
+#include "bw/engine/gl.h"
 
 namespace golxx {
-    class Cube final : public GameObject {
+    class Cube final : public bw::engine::BaseObject {
     public:
         explicit Cube() = default;
 
@@ -14,7 +13,7 @@ namespace golxx {
 
         void init() override;
 
-        void render(const std::shared_ptr<Camera>& camera) override;
+        void render(const bw::engine::Camera& camera) override;
 
     private:
         void init_mesh();

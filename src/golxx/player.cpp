@@ -1,24 +1,23 @@
 #include "golxx/player.h"
 
 #include <iostream>
-#include <bits/ostream.tcc>
 
-#include "golxx/input.h"
+#include "bw/engine/input.h"
 
 namespace golxx {
     glm::ivec2 get_movement_offset() {
         glm::ivec2 offset{};
 
-        if (Input::GetKeyPressed(glfw::KeyCode::W)) {
+        if (bw::engine::Input::GetKeyPressed(glfw::KeyCode::W)) {
             offset.y++;
         }
-        if (Input::GetKeyPressed(glfw::KeyCode::S)) {
+        if (bw::engine::Input::GetKeyPressed(glfw::KeyCode::S)) {
             offset.y--;
         }
-        if (Input::GetKeyPressed(glfw::KeyCode::A)) {
+        if (bw::engine::Input::GetKeyPressed(glfw::KeyCode::A)) {
             offset.x--;
         }
-        if (Input::GetKeyPressed(glfw::KeyCode::D)) {
+        if (bw::engine::Input::GetKeyPressed(glfw::KeyCode::D)) {
             offset.x++;
         }
 
@@ -37,9 +36,9 @@ namespace golxx {
             camera_->position += glm::vec3(movement.x, movement.y, 0.0f) * speed_ * deltaTime;
         }
 
-        const auto cursorWorldPos = camera_->cursor_to_world(Input::GetCursorPosition());
+        const auto cursorWorldPos = camera_->cursor_to_world(bw::engine::Input::GetCursorPosition());
 
-        if (const auto& scroll = Input::GetScrollOffset(); scroll.y != 0.0f) {
+        if (const auto& scroll = bw::engine::Input::GetScrollOffset(); scroll.y != 0.0f) {
             const auto zoomLevel = camera_->get_zoom_level();
             const auto scrollOffset = scroll.y * std::max(0.1f * zoomLevel, 1.0f);
             const auto newZoomLevel = std::max(zoomLevel - scrollOffset, 1.0f);
@@ -47,7 +46,7 @@ namespace golxx {
             camera_->set_zoom_level(newZoomLevel);
 
             // Calculate world position after zoom change
-            const auto worldPosAfter = camera_->cursor_to_world(Input::GetCursorPosition());
+            const auto worldPosAfter = camera_->cursor_to_world(bw::engine::Input::GetCursorPosition());
 
             // Adjust camera position to keep cursor at same world position
             const auto offset = cursorWorldPos - worldPosAfter;
@@ -58,7 +57,7 @@ namespace golxx {
             static_cast<int>(std::floor(cursorWorldPos.x)),
             static_cast<int>(std::floor(cursorWorldPos.y)));
 
-        if (Input::GetMouseButtonDown(glfw::MouseButton::Left)) {
+        if (bw::engine::Input::GetMouseButtonDown(glfw::MouseButton::Left)) {
             is_drawing_line_ = true;
             last_cell_ = current_cell;
 
@@ -68,7 +67,7 @@ namespace golxx {
 
             simulator_->set(current_cell.x, current_cell.y, drawing_state_);
         }
-        else if (Input::GetMouseButtonUp(glfw::MouseButton::Left)) {
+        else if (bw::engine::Input::GetMouseButtonUp(glfw::MouseButton::Left)) {
             is_drawing_line_ = false;
         }
         else if (is_drawing_line_ && current_cell != last_cell_) {
